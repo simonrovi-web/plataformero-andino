@@ -1,0 +1,388 @@
+[
+ {
+  "id": 1,
+  "nombre": "Montaña de Colores",
+  "sub": "Lleva el mensaje hasta la apacheta de la cumbre.",
+  "archivo": "datos/nivel1.glb",
+  "meta": 171,
+  "total": 42,
+  "loops": [
+   {
+    "cx": 112,
+    "r": 7
+   }
+  ],
+  "regresos": [
+   {
+    "x": 2.0,
+    "y": 2.0
+   },
+   {
+    "x": 92,
+    "y": 2.0
+   }
+  ],
+  "cielo": "#7fa6de",
+  "niebla": "#9db8e2",
+  "enemigos": [
+   {
+    "tipo": "caminante",
+    "x": 18,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 48,
+    "y": -0.13,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 125,
+    "y": 2.3,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 140,
+    "y": 0.09,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 155,
+    "y": 0.0,
+    "rango": 3
+   }
+  ]
+ },
+ {
+  "id": 2,
+  "nombre": "Salar Blanco",
+  "sub": "Una pista larga y lisa: dos loops para quien no frene.",
+  "archivo": "datos/nivel2.glb",
+  "meta": 256,
+  "total": 70,
+  "loops": [
+   {
+    "cx": 70,
+    "r": 6
+   },
+   {
+    "cx": 204,
+    "r": 7
+   }
+  ],
+  "regresos": [
+   {
+    "x": 2.0,
+    "y": 2.0
+   },
+   {
+    "x": 139,
+    "y": 2.0
+   }
+  ],
+  "cielo": "#3f7fd6",
+  "niebla": "#bcd3f0",
+  "enemigos": [
+   {
+    "tipo": "caminante",
+    "x": 18,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 82,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 97,
+    "y": 5.26,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 153,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 189,
+    "y": -0.04,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 219,
+    "y": 2.46,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 234,
+    "y": 1.84,
+    "rango": 3
+   }
+  ]
+ },
+ {
+  "id": 3,
+  "nombre": "Quebrada del Cobre",
+  "sub": "Cañones, puentes y peñascos colgando sobre el vacío.",
+  "archivo": "datos/nivel3.glb",
+  "meta": 233,
+  "total": 61,
+  "loops": [
+   {
+    "cx": 172,
+    "r": 6
+   }
+  ],
+  "regresos": [
+   {
+    "x": 2.0,
+    "y": 2.0
+   },
+   {
+    "x": 76,
+    "y": 2.0
+   },
+   {
+    "x": 156,
+    "y": 2.0
+   }
+  ],
+  "cielo": "#86a9d0",
+  "niebla": "#c9b79a",
+  "enemigos": [
+   {
+    "tipo": "caminante",
+    "x": 18,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 33,
+    "y": 1.9,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 90,
+    "y": 2.18,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 200,
+    "y": 4.0,
+    "rango": 3
+   }
+  ]
+ },
+ {
+  "id": 4,
+  "nombre": "Volcán Encendido",
+  "sub": "Roca negra, ceniza y un atardecer de fuego.",
+  "archivo": "datos/nivel4.glb",
+  "meta": 226,
+  "total": 59,
+  "loops": [
+   {
+    "cx": 137,
+    "r": 6
+   },
+   {
+    "cx": 197,
+    "r": 7
+   }
+  ],
+  "regresos": [
+   {
+    "x": 2.0,
+    "y": 2.0
+   },
+   {
+    "x": 116,
+    "y": 2.0
+   }
+  ],
+  "cielo": "#d9805a",
+  "niebla": "#c9785a",
+  "enemigos": [
+   {
+    "tipo": "caminante",
+    "x": 39,
+    "y": 5.97,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 54,
+    "y": 6.0,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 73,
+    "y": 2.3,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 175,
+    "y": 0.0,
+    "rango": 3
+   }
+  ]
+ },
+ {
+  "id": 5,
+  "nombre": "Glaciar de Penitentes",
+  "sub": "Bajada helada: deja que la pendiente te lance.",
+  "archivo": "datos/nivel5.glb",
+  "meta": 245,
+  "total": 67,
+  "loops": [
+   {
+    "cx": 62,
+    "r": 6
+   },
+   {
+    "cx": 120,
+    "r": 7
+   }
+  ],
+  "regresos": [
+   {
+    "x": 2.0,
+    "y": 10.0
+   },
+   {
+    "x": 162,
+    "y": 2.0
+   }
+  ],
+  "cielo": "#a9c6e8",
+  "niebla": "#dfe8f2",
+  "enemigos": [
+   {
+    "tipo": "caminante",
+    "x": 39,
+    "y": 0.03,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 105,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 176,
+    "y": 2.34,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 191,
+    "y": 3.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 227,
+    "y": -0.21,
+    "rango": 3
+   }
+  ]
+ },
+ {
+  "id": 6,
+  "nombre": "Terrazas del Inti",
+  "sub": "Sube por los andenes de cultivo hasta el templo del sol.",
+  "archivo": "datos/nivel6.glb",
+  "meta": 273,
+  "total": 71,
+  "loops": [
+   {
+    "cx": 112,
+    "r": 7
+   },
+   {
+    "cx": 148,
+    "r": 6
+   }
+  ],
+  "regresos": [
+   {
+    "x": 2.0,
+    "y": 2.0
+   },
+   {
+    "x": 190,
+    "y": 2.0
+   }
+  ],
+  "cielo": "#78aee8",
+  "niebla": "#b8d4ee",
+  "enemigos": [
+   {
+    "tipo": "caminante",
+    "x": 22,
+    "y": 2.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 43,
+    "y": 4.0,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 62,
+    "y": 8.3,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 92,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 124,
+    "y": 0.0,
+    "rango": 3
+   },
+   {
+    "tipo": "volador",
+    "x": 208,
+    "y": 4.3,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 227,
+    "y": 4.0,
+    "rango": 3
+   },
+   {
+    "tipo": "caminante",
+    "x": 257,
+    "y": 0.0,
+    "rango": 3
+   }
+  ]
+ }
+]

@@ -19,9 +19,9 @@ const F = {
   PEGUE: 7,     // bajo esta velocidad se despega del techo del loop
   ALTO: 0.6,    // altura del origen de los rayos sobre los pies
 };
-const LOOP = { cx: 112, cy: 7.08, carril: 1.6, entrada: 112, previo: 103 };
-const META_X = 171;
-const PUNTOS_REGRESO = [{ x: 2, y: 2 }, { x: 92, y: 2 }];
+const CARRIL = 1.6;        // medio desvío lateral de la hélice del loop
+// datos del nivel actual (de datos/niveles.json, que escribe generador_nivel.py)
+let niveles = [], nivel = null;
 
 // ------------------------------------------------------------ escena
 const lienzo = document.createElement('canvas');
@@ -73,10 +73,23 @@ const sonar = {
   cristal: () => { tono(1320, 0.08, 'triangle', 0.1); setTimeout(() => tono(1760, 0.12, 'triangle', 0.1), 60); },
   rebote: () => tono(180, 0.35, 'sine', 0.2, 4),
   caida: () => tono(400, 0.6, 'sawtooth', 0.08, 0.2),
+  pisoton: () => { tono(260, 0.1, 'square', 0.12, 0.5); setTimeout(() => tono(880, 0.14, 'triangle', 0.1, 1.5), 50); },
+  golpe: () => tono(200, 0.45, 'sawtooth', 0.12, 0.4),
   meta: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tono(f, 0.25, 'triangle', 0.12), i * 120)),
 };
 
-// ------------------------------------------------------------ Kallpa (personaje original)
+// ------------------------------------------------------------ modelos
+const mate = (c, r = 0.8, extra = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: r, ...extra });
+const ESFERA = new THREE.SphereGeometry(1, 20, 14);
+function pieza(geo, m, x, y, z, sx = 1, sy = sx, sz = sx) {
+  const p = new THREE.Mesh(geo, m);
+  p.position.set(x, y, z);
+  p.scale.set(sx, sy, sz);
+  p.castShadow = true;
+  return p;
+}
+
+// Kallpa (personaje original): vizcacha chaski azul con chalina y ojotas
 function crearKallpa() {
   const raiz = new THREE.Group();         // se alinea con la normal del suelo
   const espejo = new THREE.Group();       // scale.x = ±1 según hacia dónde mira
@@ -86,18 +99,11 @@ function crearKallpa() {
   espejo.add(giro);
   espejo.scale.setScalar(1.45);
 
-  const mat = (c, r = 0.8) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
-  const pelaje = mat(0x9c958c), panza = mat(0xf1e4cc), oscuro = mat(0x2b2220, 0.5),
-        rosado = mat(0xe8a0a0), ojota = mat(0x2aa198, 0.6), chalina = mat(0xc2264f, 0.9),
+  const mat = mate;
+  const pelaje = mat(0x2f6bd8), panza = mat(0xf1e4cc), oscuro = mat(0x1d2a4a, 0.5),
+        rosado = mat(0xe8a0a0), ojota = mat(0x7a4a25, 0.7), chalina = mat(0xc2264f, 0.9),
         franja = mat(0xf2b134, 0.9);
-  const esfera = new THREE.SphereGeometry(1, 20, 14);
-  const pieza = (geo, m, x, y, z, sx = 1, sy = sx, sz = sx) => {
-    const p = new THREE.Mesh(geo, m);
-    p.position.set(x, y, z);
-    p.scale.set(sx, sy, sz);
-    p.castShadow = true;
-    return p;
-  };
+  const esfera = ESFERA;
 
   giro.add(pieza(esfera, pelaje, 0, 0, 0, 0.36, 0.4, 0.32));            // cuerpo
   giro.add(pieza(esfera, panza, 0.14, -0.04, 0, 0.24, 0.3, 0.26));       // guata
@@ -169,13 +175,208 @@ function crearKallpa() {
 const kallpa = crearKallpa();
 escena.add(kallpa.raiz);
 
+// ------------------------------------------------------------ enemigos (originales)
+// Pirquincho: bicho con caparazón de piedra que patrulla de ida y vuelta.
+// Moscardón: insecto peludo que vuela a la altura de la cabeza.
+const M_ENE = {
+  piedra: mate(0x7d6b5a, 0.95), veta: mate(0xc9a36b, 0.9), cara: mate(0x4a3528, 0.8),
+  blanco: mate(0xfff6e6, 0.4), negro: mate(0x141010, 0.4), cuerno: mate(0xe8dcc0, 0.6),
+  amarillo: mate(0xf2b51c, 0.7), rojo: mate(0xd8322a, 0.3),
+  ala: mate(0xe8f2ff, 0.2, { transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
+};
+function ojosEnojados(grupo, x, y, sep, tam) {
+  for (const z of [-sep, sep]) {
+    grupo.add(pieza(ESFERA, M_ENE.blanco, x, y, z, tam));
+    grupo.add(pieza(ESFERA, M_ENE.negro, x + tam * 0.6, y - tam * 0.1, z, tam * 0.5));
+    const ceja = pieza(new THREE.BoxGeometry(tam * 2.2, tam * 0.45, tam * 0.6), M_ENE.negro, x + tam * 0.3, y + tam * 1.05, z);
+    ceja.rotation.x = z < 0 ? -0.5 : 0.5;  // cejas en V
+    ceja.rotation.z = -0.15;
+    grupo.add(ceja);
+  }
+}
+function crearPirquincho() {
+  const raiz = new THREE.Group(), espejo = new THREE.Group();
+  raiz.add(espejo);
+  const casco = new THREE.SphereGeometry(0.62, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+  espejo.add(pieza(casco, M_ENE.piedra, 0, 0.22, 0, 1.15, 0.95, 0.95));
+  for (const [y, r] of [[0.32, 0.66], [0.55, 0.5]]) {
+    const anillo = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 6, 24), M_ENE.veta);
+    anillo.position.y = y;
+    anillo.rotation.x = Math.PI / 2;
+    anillo.scale.set(1.15, 0.95, 1);
+    espejo.add(anillo);
+  }
+  const cabeza = new THREE.Group();
+  cabeza.position.set(0.68, 0.3, 0);
+  espejo.add(cabeza);
+  cabeza.add(pieza(ESFERA, M_ENE.cara, 0, 0, 0, 0.26, 0.22, 0.24));
+  ojosEnojados(cabeza, 0.14, 0.06, 0.1, 0.075);
+  for (const z of [-0.13, 0.13]) {
+    const c = pieza(new THREE.ConeGeometry(0.05, 0.22, 6), M_ENE.cuerno, 0.02, 0.24, z);
+    c.rotation.z = -0.5;
+    cabeza.add(c);
+  }
+  const patas = [];
+  for (const [x, z] of [[0.35, -0.35], [0.35, 0.35], [-0.35, -0.35], [-0.35, 0.35]]) {
+    const p = pieza(new THREE.CapsuleGeometry(0.07, 0.12, 4, 6), M_ENE.cara, x, 0.1, z);
+    espejo.add(p);
+    patas.push(p);
+  }
+  return { raiz, espejo, patas, r: 0.65, alto: 0.4 };
+}
+function crearMoscardon() {
+  const raiz = new THREE.Group(), espejo = new THREE.Group();
+  raiz.add(espejo);
+  espejo.add(pieza(ESFERA, M_ENE.amarillo, 0, 0, 0, 0.42, 0.32, 0.32));
+  for (const x of [-0.14, 0.1]) {
+    const f = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.05, 6, 18), M_ENE.negro);
+    f.position.x = x;
+    f.rotation.y = Math.PI / 2;
+    f.scale.setScalar(1 - Math.abs(x) * 0.8);
+    espejo.add(f);
+  }
+  espejo.add(pieza(ESFERA, M_ENE.negro, 0.42, 0.04, 0, 0.2));
+  for (const z of [-0.1, 0.1]) espejo.add(pieza(ESFERA, M_ENE.rojo, 0.55, 0.09, z, 0.08));
+  const aguijon = pieza(new THREE.ConeGeometry(0.06, 0.25, 6), M_ENE.negro, -0.5, -0.02, 0);
+  aguijon.rotation.z = Math.PI / 2;
+  espejo.add(aguijon);
+  const alas = [];
+  for (const z of [-1, 1]) {
+    const pivote = new THREE.Group();
+    pivote.position.set(0.05, 0.25, z * 0.08);
+    const ala = new THREE.Mesh(new THREE.CircleGeometry(0.32, 12), M_ENE.ala);
+    ala.scale.set(1, 0.55, 1);
+    ala.rotation.x = Math.PI / 2;
+    ala.position.set(-0.08, 0, z * 0.3);
+    pivote.add(ala);
+    espejo.add(pivote);
+    alas.push(pivote);
+  }
+  return { raiz, espejo, alas, r: 0.5, alto: 0 };
+}
+
+const grupoEnemigos = new THREE.Group();
+escena.add(grupoEnemigos);
+let enemigos = [];
+const particulas = [];
+
+function crearEnemigos(datos) {
+  grupoEnemigos.clear();
+  enemigos = datos.map((d) => {
+    const m = d.tipo === 'volador' ? crearMoscardon() : crearPirquincho();
+    grupoEnemigos.add(m.raiz);
+    return { ...m, tipo: d.tipo, x0: d.x, y0: d.y, rango: d.rango, x: d.x, y: d.y, dir: -1, fase: Math.random() * 6, vivo: true, muere: 0 };
+  });
+}
+function reiniciarEnemigos() {
+  for (const e of enemigos) {
+    Object.assign(e, { x: e.x0, y: e.y0, dir: -1, vivo: true, muere: 0 });
+    e.raiz.visible = true;
+    e.raiz.scale.set(1, 1, 1);
+    e.raiz.rotation.set(0, 0, 0);
+  }
+}
+
+const rayoE = new THREE.Raycaster();
+rayoE.firstHitOnly = true;
+function moverEnemigos(dt) {
+  for (const e of enemigos) {
+    if (!e.vivo) continue;
+    e.fase += dt;
+    if (e.tipo === 'volador') {
+      e.x = e.x0 + Math.sin(e.fase * 0.9) * e.rango;
+      e.y = e.y0 + Math.sin(e.fase * 2.2) * 0.5;
+      e.dir = Math.cos(e.fase * 0.9) >= 0 ? 1 : -1;
+    } else {
+      e.x += e.dir * 1.8 * dt;
+      if (Math.abs(e.x - e.x0) > e.rango) { e.x = e.x0 + Math.sign(e.x - e.x0) * e.rango; e.dir *= -1; }
+      rayoE.set(_o.set(e.x, e.y + 2, 0), _d.set(0, -1, 0));
+      rayoE.far = 4;
+      const h = rayoE.intersectObjects(suelo, false)[0];
+      if (h) e.y = h.point.y;
+    }
+  }
+}
+
+// Caer encima (en el aire y por sobre su centro) lo derrota; cualquier otro choque golpea a Kallpa.
+function chocarEnemigos(cx, cy) {
+  for (const e of enemigos) {
+    if (!e.vivo) continue;
+    const dx = cx - e.x, dy = cy - (e.y + e.alto);
+    if (dx * dx + dy * dy > (e.r + 0.55) ** 2) continue;
+    if (!j.enSuelo && ((j.vel.y < 0 && dy > 0.1) || dy > 0.45)) {
+      derrotar(e);
+      j.vel.y = teclas.salto ? 15 : 10.5;
+      j.volteo = 1;
+    } else if (j.invul <= 0) {
+      j.invul = 1.6;
+      tiempo += 3;
+      avisar('+3 s');
+      sonar.golpe();
+      j.volteo = 0;
+      despegar(new THREE.Vector2((Math.sign(dx) || -j.mira) * 9, 8));
+    }
+  }
+}
+
+function derrotar(e) {
+  e.vivo = false;
+  e.muere = 0.5;
+  derrotados++;
+  sonar.pisoton();
+  for (let i = 0; i < 8; i++) {
+    const p = pieza(ESFERA, M_ENE.cuerno, e.x, e.y + e.alto, 0, 0.12);
+    p.castShadow = false;
+    const a = (i / 8) * Math.PI * 2;
+    p.userData = { v: new THREE.Vector3(Math.cos(a) * 4, Math.sin(a) * 3 + 3, Math.sin(a * 3)), vida: 0.5 };
+    escena.add(p);
+    particulas.push(p);
+  }
+}
+
+function animarEnemigos(dt, reloj) {
+  for (const e of enemigos) {
+    e.raiz.position.set(e.x, e.y, 0);
+    e.espejo.scale.x += (e.dir - e.espejo.scale.x) * Math.min(1, dt * 10);
+    if (e.tipo === 'volador') e.alas.forEach((a, i) => (a.rotation.x = Math.sin(reloj * 45) * 0.7 * (i ? 1 : -1)));
+    else e.patas.forEach((p, i) => (p.rotation.z = Math.sin(e.fase * 12 + i * Math.PI / 2) * 0.6));
+    if (!e.vivo && e.muere > 0) {
+      e.muere -= dt;
+      if (e.tipo === 'volador') { e.raiz.rotation.z += dt * 14; e.y -= dt * 6; }
+      else e.raiz.scale.set(1.25, Math.max(0.15, e.muere * 2), 1.25);  // aplastado
+      if (e.muere <= 0) e.raiz.visible = false;
+    }
+  }
+  for (let i = particulas.length - 1; i >= 0; i--) {
+    const p = particulas[i], u = p.userData;
+    u.vida -= dt;
+    u.v.y -= 20 * dt;
+    p.position.addScaledVector(u.v, dt);
+    p.scale.setScalar(Math.max(0.01, u.vida * 0.3));
+    if (u.vida <= 0) { escena.remove(p); particulas.splice(i, 1); }
+  }
+}
+
+let avisoHasta = 0;
+function avisar(texto) {
+  const el = document.getElementById('aviso');
+  el.textContent = texto;
+  el.classList.remove('oculto');
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = '';
+  clearTimeout(avisoHasta);
+  avisoHasta = setTimeout(() => el.classList.add('oculto'), 900);
+}
+
 // ------------------------------------------------------------ estado
 const j = {
   pos: new THREE.Vector2(), vel: new THREE.Vector2(), n: new THREE.Vector2(0, 1),
   gsp: 0, enSuelo: false, mira: 1, fase: 0, volteo: 0, angulo: 0,
-  z: 0, enLoop: false, loopHecho: false, t: 0, xPrev: 0,
+  z: 0, enLoop: false, loopHecho: false, loopIdx: -1, t: 0, xPrev: 0, invul: 0,
 };
-let suelo = [], mallaLoop = null, cristales = [], total = 0;
+let derrotados = 0;
+let escenaNivel = null, suelo = [], mallasLoop = [], cristales = [], total = 0;
 let juntados = 0, tiempo = 0, jugando = false, terminado = false;
 
 const teclas = { izq: false, der: false, salto: false, freno: false };
@@ -196,7 +397,7 @@ function lanzar(ox, oy, dx, dy, lejos, lista) {
   return { dist: h.distance, n: n.normalize(), obj: h.object };
 }
 const tangente = (n) => new THREE.Vector2(n.y, -n.x);
-const colisiones = () => (j.enLoop ? [...suelo, mallaLoop] : suelo);
+const colisiones = () => (j.enLoop ? [...suelo, mallasLoop[j.loopIdx]] : suelo);
 const esLlareta = (o) => o.name.startsWith('SM_Llareta');
 
 // Dos rayos separados a lo largo del suelo: evita caer entre tablones y suaviza el loop.
@@ -256,6 +457,8 @@ function pasoSuelo(dt) {
   j.n.copy(h.nMedia);
 
   if (esLlareta(h.obj)) return rebotar(tangente(j.n).multiplyScalar(j.gsp * 0.7));
+  // fuera del loop solo se corre por pendientes de menos de 60°: en bordes de peñascos se cae
+  if (!j.enLoop && j.n.y < 0.5) return despegar(t.multiplyScalar(j.gsp));
   if (j.n.y < -0.1 && Math.abs(j.gsp) < F.PEGUE) {
     return despegar(tangente(j.n).multiplyScalar(j.gsp).addScaledVector(j.n, 1));
   }
@@ -306,24 +509,28 @@ function pasoAire(dt) {
 
 // El loop es una hélice: entra por z=+1.6 y sale por z=-1.6, así la pista no choca consigo misma.
 function seguirLoop(dt) {
-  if (!j.enLoop && !j.loopHecho && j.enSuelo && j.gsp > 0 && j.xPrev < LOOP.entrada && j.pos.x >= LOOP.entrada && j.pos.y < 0.6) {
+  if (!j.enLoop) {
+    const i = nivel.loops.findIndex((l) => j.pos.x > l.cx - 12 && j.pos.x < l.cx + 13);
+    if (i !== j.loopIdx) { j.loopIdx = i; j.loopHecho = false; }
+  }
+  const L = nivel.loops[j.loopIdx];
+  if (L && !j.enLoop && !j.loopHecho && j.enSuelo && j.gsp > 0 && j.xPrev < L.cx && j.pos.x >= L.cx && j.pos.y < 0.6) {
     j.enLoop = true;
     j.t = 0;
   }
   if (j.enLoop) {
-    const crudo = Math.atan2(j.pos.x - LOOP.cx, LOOP.cy - j.pos.y);
+    const crudo = Math.atan2(j.pos.x - L.cx, L.r + 0.08 - j.pos.y);
     let d = crudo - j.t;
     d = ((d + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
     j.t += d;
     if (j.t >= 2 * Math.PI - 0.1) { j.enLoop = false; j.loopHecho = true; }
     else if (j.t < -0.1) { j.enLoop = false; }
-    else j.z = LOOP.carril * (1 - 2 * THREE.MathUtils.clamp(j.t / (2 * Math.PI), 0, 1));
+    else j.z = CARRIL * (1 - 2 * THREE.MathUtils.clamp(j.t / (2 * Math.PI), 0, 1));
   }
   if (!j.enLoop) {
-    if (j.pos.x < 100 || j.pos.x > 125) j.loopHecho = false;
     let meta = 0;
-    if (!j.loopHecho && j.pos.x > LOOP.previo && j.pos.x < LOOP.entrada + 0.5) {
-      meta = LOOP.carril * THREE.MathUtils.smoothstep(j.pos.x, LOOP.previo, LOOP.entrada - 1);
+    if (L && !j.loopHecho && j.pos.x > L.cx - 9 && j.pos.x < L.cx + 0.5) {
+      meta = CARRIL * THREE.MathUtils.smoothstep(j.pos.x, L.cx - 9, L.cx - 1);
     }
     j.z += THREE.MathUtils.clamp(meta - j.z, -3 * dt, 3 * dt);
   }
@@ -333,10 +540,12 @@ function seguirLoop(dt) {
 function paso(dt) {
   if (j.enSuelo) pasoSuelo(dt); else pasoAire(dt);
   seguirLoop(dt);
+  moverEnemigos(dt);
+  j.invul = Math.max(0, j.invul - dt);
 
   if (j.pos.y < -16) {
     sonar.caida();
-    const p = PUNTOS_REGRESO.filter((q) => q.x <= j.pos.x).pop() || PUNTOS_REGRESO[0];
+    const p = nivel.regresos.filter((q) => q.x <= j.pos.x).pop() || nivel.regresos[0];
     reiniciarJugador(p.x, p.y);
   }
   // cristales
@@ -349,7 +558,8 @@ function paso(dt) {
       sonar.cristal();
     }
   }
-  if (!terminado && j.pos.x > META_X) terminar();
+  chocarEnemigos(cx, cy);
+  if (!terminado && j.pos.x > nivel.meta) terminar();
 }
 
 // ------------------------------------------------------------ dibujo
@@ -357,6 +567,8 @@ const _foco = new THREE.Vector3();
 function dibujar(dt, reloj) {
   const k = kallpa;
   k.raiz.position.set(j.pos.x, j.pos.y, j.z);
+  k.raiz.visible = j.invul <= 0 || Math.floor(reloj * 16) % 2 === 0;  // parpadea tras un golpe
+  animarEnemigos(dt, reloj);
   const objetivo = j.enSuelo ? Math.atan2(-j.n.x, j.n.y) : 0;
   let d = objetivo - j.angulo;
   d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -395,6 +607,7 @@ function dibujar(dt, reloj) {
   sol.target.position.set(j.pos.x, j.pos.y, 0);
 
   document.getElementById('cristales').textContent = juntados;
+  document.getElementById('derrotados').textContent = derrotados;
   document.getElementById('tiempo').textContent = formato(tiempo);
   document.getElementById('velocidad').textContent = Math.round(rapidez * 3.6);
   render.render(escena, camara);
@@ -418,16 +631,18 @@ function ciclo(ahora) {
 }
 
 function reiniciarJugador(x, y) {
-  Object.assign(j, { gsp: 0, enSuelo: false, enLoop: false, loopHecho: false, z: 0, volteo: 0, mira: 1, xPrev: x });
+  Object.assign(j, { gsp: 0, enSuelo: false, enLoop: false, loopHecho: false, loopIdx: -1, z: 0, volteo: 0, mira: 1, xPrev: x, invul: 1 });
   j.pos.set(x, y);
   j.vel.set(0, 0);
   j.n.set(0, 1);
 }
 
 function reiniciar() {
-  reiniciarJugador(PUNTOS_REGRESO[0].x, PUNTOS_REGRESO[0].y);
+  reiniciarJugador(nivel.regresos[0].x, nivel.regresos[0].y);
   cristales.forEach((c) => (c.visible = true));
+  reiniciarEnemigos();
   juntados = 0;
+  derrotados = 0;
   tiempo = 0;
   terminado = false;
   document.getElementById('fin').classList.add('oculto');
@@ -437,9 +652,28 @@ function terminar() {
   terminado = true;
   sonar.meta();
   const todos = juntados === total ? ' ¡Todos los cristales!' : '';
+  const previo = progreso.marcas[nivel.id];
+  const record = !previo || tiempo < previo.tiempo;
+  progreso.marcas[nivel.id] = {
+    tiempo: record ? tiempo : previo.tiempo,
+    cristales: Math.max(juntados, previo ? previo.cristales : 0),
+  };
+  progreso.abierto = Math.max(progreso.abierto, nivel.id + 1);
+  guardarProgreso();
   document.getElementById('resumen').textContent =
-    `Tiempo ${formato(tiempo)} · Cristales ${juntados} de ${total}.${todos}`;
+    `${nivel.nombre} · Tiempo ${formato(tiempo)}${record ? ' (¡récord!)' : ''} · Cristales ${juntados} de ${total}` +
+    ` · Enemigos ${derrotados} de ${enemigos.length}.${todos}`;
+  const sig = niveles.find((n) => n.id === nivel.id + 1);
+  document.getElementById('siguiente').classList.toggle('oculto', !sig);
   setTimeout(() => document.getElementById('fin').classList.remove('oculto'), 900);
+}
+
+// ------------------------------------------------------------ progreso (solo en este navegador)
+const CLAVE = 'kallpa_progreso_v1';
+let progreso = { abierto: 1, marcas: {} };
+try { progreso = { ...progreso, ...JSON.parse(localStorage.getItem(CLAVE) || '{}') }; } catch { /* sin almacenamiento */ }
+function guardarProgreso() {
+  try { localStorage.setItem(CLAVE, JSON.stringify(progreso)); } catch { /* sin almacenamiento */ }
 }
 
 // ------------------------------------------------------------ controles
@@ -453,6 +687,7 @@ function pulsar(nombre, activo) {
 }
 addEventListener('keydown', (e) => {
   if (e.code === 'KeyR' && jugando) return reiniciar();
+  if (e.code === 'Escape' && jugando) return mostrarMenu();
   const n = MAPA[e.code];
   if (n) { e.preventDefault(); pulsar(n, true); }
 });
@@ -468,33 +703,96 @@ for (const b of document.querySelectorAll('#tactil button')) {
 }
 if (matchMedia('(pointer: coarse)').matches) document.getElementById('tactil').classList.remove('oculto');
 
-document.getElementById('jugar').addEventListener('click', () => {
+document.getElementById('otra').addEventListener('click', reiniciar);
+document.getElementById('siguiente').addEventListener('click', () => jugarNivel(nivel.id + 1));
+document.getElementById('menu').addEventListener('click', mostrarMenu);
+
+// ------------------------------------------------------------ menú de niveles
+function mostrarMenu() {
+  jugando = false;
+  document.getElementById('fin').classList.add('oculto');
+  const lista = document.getElementById('niveles');
+  lista.replaceChildren();
+  for (const n of niveles) {
+    const b = document.createElement('button');
+    const abierto = n.id <= progreso.abierto;
+    const m = progreso.marcas[n.id];
+    b.className = 'nivel';
+    b.disabled = !abierto;
+    b.innerHTML = `<b>${n.id}. ${n.nombre}</b><small>${abierto ? n.sub : '🔒 Termina el nivel anterior'}</small>` +
+      (m ? `<small class="marca">⏱ ${formato(m.tiempo)} · ◆ ${m.cristales}/${n.total}</small>` : '');
+    b.addEventListener('click', () => jugarNivel(n.id));
+    lista.append(b);
+  }
+  document.getElementById('inicio').classList.remove('oculto');
+}
+
+async function jugarNivel(id) {
   audio = audio || new AudioContext();
   document.getElementById('inicio').classList.add('oculto');
+  document.getElementById('fin').classList.add('oculto');
+  document.getElementById('carga').classList.remove('oculto');
+  jugando = false;
+  try {
+    await cargarNivel(niveles.find((n) => n.id === id));
+  } catch (err) {
+    document.getElementById('carga').textContent = 'No se pudo cargar el nivel: ' + err.message;
+    return;
+  }
+  document.getElementById('carga').classList.add('oculto');
+  document.getElementById('nombre-nivel').textContent = nivel.nombre;
   reiniciar();
+  camara.position.set(j.pos.x, j.pos.y + 4, 19);
   jugando = true;
-});
-document.getElementById('otra').addEventListener('click', reiniciar);
+}
 
 // ------------------------------------------------------------ carga del nivel
-const boton = document.getElementById('jugar');
-boton.disabled = true;
-new GLTFLoader().load('datos/nivel1.glb', (gltf) => {
-  escena.add(gltf.scene);
-  gltf.scene.updateMatrixWorld(true);
-  gltf.scene.traverse((o) => {
+const cargador = new GLTFLoader();
+async function cargarNivel(datos) {
+  const gltf = await cargador.loadAsync(datos.archivo);
+  if (escenaNivel) {
+    escena.remove(escenaNivel);
+    escenaNivel.traverse((o) => {
+      if (o.isMesh) {
+        o.geometry.disposeBoundsTree?.();
+        o.geometry.dispose();
+        o.material.dispose();
+      }
+    });
+  }
+  nivel = datos;
+  escenaNivel = gltf.scene;
+  suelo = [];
+  mallasLoop = [];
+  cristales.length = 0;
+  escena.add(escenaNivel);
+  escena.background = new THREE.Color(datos.cielo);
+  escena.fog.color.set(datos.niebla);
+  escenaNivel.updateMatrixWorld(true);
+  // El exportador glTF comparte el índice entre mallas de igual topología (p. ej. dos loops)
+  // y el BVH reordena el índice al construirse: se clona para que cada BVH tenga el suyo.
+  const indices = new Set();
+  const preparar = (g) => {
+    if (g.boundsTree) return;
+    if (g.index) {
+      if (indices.has(g.index.array)) g.setIndex(g.index.clone());
+      indices.add(g.index.array);
+    }
+    g.computeBoundsTree();
+  };
+  escenaNivel.traverse((o) => {
     if (!o.isMesh) return;
     const nombre = o.name;
     o.receiveShadow = true;
     o.castShadow = !nombre.startsWith('SM_Fondo');
     if (/^SM_(Tramo_|Rampa|Puente_Tabla|Penasco|Meta_Apacheta|Llareta)/.test(nombre)) {
       o.material.side = THREE.FrontSide;
-      if (!o.geometry.boundsTree) o.geometry.computeBoundsTree();
+      preparar(o.geometry);
       suelo.push(o);
-    } else if (nombre === 'SM_Loop') {
+    } else if (nombre.startsWith('SM_Loop_')) {
       o.material.side = THREE.FrontSide;
-      o.geometry.computeBoundsTree();
-      mallaLoop = o;
+      preparar(o.geometry);
+      mallasLoop[Number(nombre.slice(8))] = o;
     } else if (nombre.startsWith('SM_Cristal')) {
       o.castShadow = false;
       o.userData.y = o.position.y;
@@ -503,12 +801,18 @@ new GLTFLoader().load('datos/nivel1.glb', (gltf) => {
   });
   total = cristales.length;
   document.getElementById('total').textContent = total;
+  crearEnemigos(datos.enemigos || []);
+  document.getElementById('enemigos').textContent = enemigos.length;
+}
+
+fetch('datos/niveles.json').then((r) => r.json()).then((lista) => {
+  niveles = lista;
   document.getElementById('cargando').remove();
-  boton.disabled = false;
-  reiniciarJugador(PUNTOS_REGRESO[0].x, PUNTOS_REGRESO[0].y);
-}, undefined, (err) => {
-  document.getElementById('cargando').textContent = 'No se pudo cargar el nivel: ' + err.message;
+  mostrarMenu();
+}).catch((err) => {
+  document.getElementById('cargando').textContent = 'No se pudo leer la lista de niveles: ' + err.message;
 });
 
-window.kallpa = { j, teclas, F, paso, dibujar, cristales, estado: () => ({ juntados, total, terminado, tiempo }) };  // para depurar desde la consola
+window.kallpa = { j, teclas, F, paso, dibujar, cristales, jugarNivel, estado: () => ({ nivel: nivel?.id, juntados, total, terminado, tiempo, derrotados, enemigos: enemigos.length }),
+  enemigos: () => enemigos };  // para depurar desde la consola
 requestAnimationFrame(ciclo);
