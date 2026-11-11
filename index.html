@@ -2,37 +2,68 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Kallpa · Montaña de Colores</title>
+<meta name="description" content="Plataformero de velocidad en los Andes: Kallpa, la vizcacha chaski, lleva el mensaje de apacheta en apacheta.">
+<meta name="theme-color" content="#c2264f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="iconos/icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kallpa">
 <style>
   :root { --tinta: #2b1a12; --crema: #fff4e0; --cobre: #e0702a; --rojo: #c2264f; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #6f9ad8; font-family: system-ui, "Segoe UI", sans-serif; color: var(--crema); touch-action: none; user-select: none; -webkit-user-select: none; }
   canvas { display: block; }
-  #hud { position: fixed; top: 12px; left: 16px; display: flex; gap: 18px; font-weight: 800; font-size: 20px; text-shadow: 0 2px 0 var(--tinta); pointer-events: none; }
+  #hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); right: 120px; display: flex; flex-wrap: wrap; gap: 4px 18px; font-weight: 800; font-size: 20px; text-shadow: 0 2px 0 var(--tinta); pointer-events: none; }
   #hud span b { color: #ffd08a; }
+  #botones { position: fixed; top: max(10px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); display: flex; gap: 8px; }
+  #botones button, .redondo { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--crema); background: rgba(43, 26, 18, .45); color: var(--crema); font-size: 20px; cursor: pointer; padding: 0; }
+  #jefe { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); font-weight: 900; font-size: 20px; text-shadow: 0 2px 0 var(--tinta); pointer-events: none; white-space: nowrap; }
+  #jefe b { color: #ff5a6a; letter-spacing: 2px; }
+  #jefe span { opacity: .3; }
   .panel { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(43, 26, 18, .55); }
-  .panel > div { background: var(--crema); color: var(--tinta); border-radius: 18px; padding: 28px 32px; max-width: 620px; margin: 16px; text-align: center; box-shadow: 0 8px 0 var(--tinta); }
+  .panel > div { background: var(--crema); color: var(--tinta); border-radius: 18px; padding: 28px 32px; max-width: 640px; margin: 16px; text-align: center; box-shadow: 0 8px 0 var(--tinta); max-height: calc(100dvh - 32px); overflow-y: auto; }
   .panel h1 { margin: 0 0 4px; font-size: 34px; color: var(--rojo); }
   .panel h2 { margin: 0 0 16px; font-size: 18px; color: var(--cobre); font-weight: 700; }
+  .panel h3 { margin: 18px 0 4px; font-size: 16px; color: var(--cobre); }
   .panel p { margin: 8px 0; line-height: 1.4; }
   .panel kbd { background: var(--tinta); color: var(--crema); border-radius: 5px; padding: 1px 7px; font-size: 14px; }
   .panel button { margin-top: 14px; font: inherit; font-weight: 800; font-size: 20px; border: 0; border-radius: 12px; padding: 12px 28px; background: var(--rojo); color: var(--crema); cursor: pointer; box-shadow: 0 4px 0 var(--tinta); }
-  .panel > div { max-height: calc(100vh - 32px); overflow-y: auto; }
   .panel button.sec { font-size: 16px; padding: 9px 16px; background: var(--tinta); }
-  .fila { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .fila { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
   #niveles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 12px; text-align: left; }
   #niveles .nivel { margin: 0; padding: 10px 12px; font-size: 15px; display: flex; flex-direction: column; gap: 3px; text-align: left; }
   #niveles .nivel small { font-weight: 500; font-size: 12px; opacity: .9; line-height: 1.3; }
   #niveles .nivel small.marca { font-weight: 800; color: #ffd08a; }
-  #niveles .nivel:disabled { background: #9b8c80; cursor: default; }
-  #aviso { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); font-size: 40px; font-weight: 900; color: #ff6b5a; text-shadow: 0 3px 0 var(--tinta); pointer-events: none; animation: subir .9s ease-out forwards; }
+  #niveles .nivel:disabled, #trajes .traje:disabled { background: #9b8c80; cursor: default; }
+  #trajes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  #trajes .traje { margin: 0; padding: 8px 10px; font-size: 13px; display: flex; align-items: center; gap: 6px; background: var(--tinta); text-align: left; box-shadow: 0 3px 0 #000; }
+  #trajes .traje.elegido { outline: 3px solid var(--cobre); }
+  #trajes .traje i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--crema); flex: none; }
+  #medalla { font-size: 56px; line-height: 1; }
+  #historia { position: fixed; left: 0; right: 0; bottom: 0; padding: 22px 24px max(26px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(43, 26, 18, .85) 35%); text-align: center; }
+  #historia p { margin: 0 auto 10px; max-width: 760px; font-size: 22px; font-weight: 700; line-height: 1.35; text-shadow: 0 2px 0 var(--tinta); }
+  #historia button { font: inherit; font-weight: 800; border: 2px solid var(--crema); background: transparent; color: var(--crema); border-radius: 10px; padding: 6px 16px; cursor: pointer; }
+  #aviso { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); font-size: 40px; font-weight: 900; color: #ff6b5a; text-shadow: 0 3px 0 var(--tinta); pointer-events: none; animation: subir 1.1s ease-out forwards; white-space: nowrap; }
   @keyframes subir { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -40px; } }
   .oculto { display: none !important; }
-  #tactil { position: fixed; bottom: 18px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 16px; pointer-events: none; }
+  #tactil { position: fixed; bottom: max(18px, env(safe-area-inset-bottom)); left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 max(16px, env(safe-area-inset-left)); pointer-events: none; }
   #tactil div { display: flex; gap: 14px; }
-  #tactil button { pointer-events: auto; width: 76px; height: 76px; border-radius: 50%; border: 3px solid var(--crema); background: rgba(43, 26, 18, .35); color: var(--crema); font-size: 30px; font-weight: 900; }
+  #tactil button { pointer-events: auto; width: 76px; height: 76px; border-radius: 50%; border: 3px solid var(--crema); background: rgba(43, 26, 18, .35); color: var(--crema); font-size: 30px; font-weight: 900; touch-action: none; }
   #tactil button.activo { background: rgba(194, 38, 79, .7); }
+  @media (max-width: 760px) {
+    #hud { font-size: 15px; gap: 2px 12px; right: 110px; }
+    #nombre-nivel { display: none; }
+    #jefe { top: 64px; font-size: 16px; }
+    #aviso { font-size: 28px; }
+    #historia p { font-size: 17px; }
+    .panel > div { padding: 20px 18px; }
+    .panel h1 { font-size: 28px; }
+    #tactil button { width: 70px; height: 70px; }
+  }
 </style>
 <script type="importmap">
 { "imports": {
@@ -43,22 +74,40 @@
 </script>
 </head>
 <body>
-<div id="hud"><span id="nombre-nivel"></span><span>◆ <b id="cristales">0</b>/<b id="total">0</b></span><span>✸ <b id="derrotados">0</b>/<b id="enemigos">0</b></span><span>⏱ <b id="tiempo">0:00.0</b></span><span><b id="velocidad">0</b> km/h</span></div>
+<div id="hud"><span id="nombre-nivel"></span><span>◆ <b id="cristales">0</b>/<b id="total">0</b></span><span>✸ <b id="derrotados">0</b>/<b id="enemigos">0</b></span><span>🪢 <b id="quipus">0</b>/3</span><span>⏱ <b id="tiempo">0:00.0</b></span><span><b id="velocidad">0</b> km/h</span></div>
+<div id="botones"><button class="sonido" title="Sonido (M)">🔊</button><button id="boton-pausa" title="Pausa (Esc)">⏸</button></div>
+<div id="jefe" class="oculto"></div>
 
 <div id="aviso" class="oculto"></div>
+
+<div id="historia" class="oculto">
+  <p id="historia-texto"></p>
+  <button id="saltar-historia">Saltar ▶</button>
+</div>
 
 <div id="inicio" class="panel"><div>
   <h1>Kallpa</h1>
   <h2>la vizcacha chaski</h2>
   <p>Lleva el mensaje por los Andes hasta cada apacheta. Junta cristales de cobre, rebota en la llareta y gana impulso para dar la vuelta a los loops. Salta encima de los pirquinchos y moscardones para derrotarlos; si te topas con uno, pierdes 3 segundos.</p>
-  <p><kbd>←</kbd> <kbd>→</kbd> correr · <kbd>Espacio</kbd> saltar · <kbd>↓</kbd> frenar · <kbd>R</kbd> reiniciar · <kbd>Esc</kbd> niveles</p>
+  <p>Mantén el salto mientras caes para <b>planear con la chalina</b>: sobre los cañones, el viento te sube. Súbete al <b>cóndor</b> para cruzar por lo alto y busca los <b>3 quipus</b> escondidos en cada nivel.</p>
+  <p><kbd>←</kbd> <kbd>→</kbd> correr · <kbd>Espacio</kbd> saltar / planear · <kbd>↓</kbd> frenar · <kbd>R</kbd> reiniciar · <kbd>Esc</kbd> pausa · <kbd>M</kbd> sonido</p>
   <div id="niveles"></div>
   <p id="cargando">Cargando los niveles…</p>
+  <h3>Trajes · quipus juntados: <span id="quipus-total">0</span></h3>
+  <div id="trajes"></div>
+  <div class="fila"><button id="ver-historia" class="sec">Ver la historia</button></div>
 </div></div>
 
 <div id="carga" class="panel oculto"><div><p>Cargando el cerro…</p></div></div>
 
+<div id="pausa" class="panel oculto"><div>
+  <h1>Pausa</h1>
+  <button id="seguir">Seguir ▶</button>
+  <div class="fila"><button id="pausa-reiniciar" class="sec">Reiniciar</button><button id="pausa-menu" class="sec">Niveles</button><button class="sec sonido">🔊</button></div>
+</div></div>
+
 <div id="fin" class="panel oculto"><div>
+  <div id="medalla"></div>
   <h1>¡Mensaje entregado!</h1>
   <p id="resumen"></p>
   <button id="siguiente">Siguiente nivel ▶</button>
@@ -67,9 +116,14 @@
 
 <div id="tactil" class="oculto">
   <div><button data-tecla="izq">◀</button><button data-tecla="der">▶</button></div>
-  <div><button data-tecla="salto">⤒</button></div>
+  <div><button data-tecla="freno">▼</button><button data-tecla="salto">⤒</button></div>
 </div>
 
 <script type="module" src="juego.js"></script>
+<script>
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
 </body>
 </html>
